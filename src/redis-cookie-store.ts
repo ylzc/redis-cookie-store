@@ -162,7 +162,6 @@ export class RedisCookieStore extends Store {
         const client = this.client;
         if (client) {
             const time = Date.now();
-            // logger.log(`session repair: ${pattern} start at ${time}`);
             let cursor = 0, flag = true, count = 1;
             while (flag) {
                 try {
@@ -177,14 +176,12 @@ export class RedisCookieStore extends Store {
                     }
                     if (Date.now() - time >= 10 * 1000) {
                         flag = false;
-                        // logger.error(`session repair: ${pattern} timeout`);
                     }
                 } catch (e) {
                     flag = false;
                     console.log(e);
                 }
             }
-            // logger.log(`session repair: ${pattern} end at ${Date.now()}`);
         }
     }
 }
