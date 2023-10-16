@@ -1,13 +1,6 @@
-// node core modules
-import { inherits } from 'node:util';
-
-// 3rd party modules
-import _, { keys } from 'lodash';
 import { Store, permuteDomain, permutePath, Cookie } from 'tough-cookie';
 import type { RedisClientType } from 'redis';
 import { ScanCommandOptions } from '@redis/client/dist/lib/commands/SCAN';
-
-// internal modules
 
 export class RedisCookieStore extends Store {
 
