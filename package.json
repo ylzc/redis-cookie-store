@@ -1,5 +1,5 @@
 {
-  "name": "@ijs/redis-cookie-store",
+  "name": "@ijs/tough-cookie-redis-store",
   "version": "1.0.0",
   "description": "Redis cookie store for tough-cookie module",
   "files": [
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ylzc/redis-cookie-store.git"
+    "url": "https://github.com/ylzc/tough-cookie-redis-store.git"
   },
   "keywords": [
     "redis",
@@ -24,9 +24,9 @@
   "author": "ylzc",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ylzc/redis-cookie-store/issues"
+    "url": "https://github.com/ylzc/tough-cookie-redis-store/issues"
   },
-  "homepage": "https://github.com/ylzc/redis-cookie-store",
+  "homepage": "https://github.com/ylzc/tough-cookie-redis-store",
   "dependencies": {
   },
   "peerDependencies": {
