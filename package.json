@@ -1,6 +1,6 @@
 {
   "name": "@ijs/tough-cookie-redis-store",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Redis cookie store for tough-cookie module",
   "files": [
     "lib/"
