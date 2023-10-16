@@ -5,7 +5,7 @@ a Redis store for tough-cookie module. See [tough-cookie documentation](https://
 ## Installation
 
 ```sh
-npm install --save redis-cookie-store
+npm install --save @ijs/redis-cookie-store
 ```
 
 ## Options
@@ -16,11 +16,11 @@ npm install --save redis-cookie-store
 ## Usage
 
 ```js
-const redis = require('redis');
+const { createClient } = require('redis');
 const { CookieJar } = require('tough-cookie');
-const RedisCookieStore = require('redis-cookie-store');
+const { RedisCookieStore } = require('@ijs/redis-cookie-store');
 
-const client = redis.createClient();
+const client = createClient();
 
 const defaultJar = new CookieJar(new RedisCookieStore(client));
 
