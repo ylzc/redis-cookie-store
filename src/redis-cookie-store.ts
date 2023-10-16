@@ -15,6 +15,15 @@ export class RedisCookieStore extends Store {
         self.id = id || 'default';
         self.client = redisClient;
         self.synchronous = false;
+        if (!redisClient.isReady) {
+            redisClient
+                .on('error', err => console.log('Redis Client Error', err))
+                .connect()
+                .catch(err => {
+                    console.log('Redis Connect Error', err);
+                    process.exit(1);
+                });
+        }
     }
 
     getKeyName(domain: string, path?: string) {
