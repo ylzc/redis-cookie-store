@@ -1,6 +1,7 @@
 import { Store, permuteDomain, permutePath, Cookie } from 'tough-cookie';
 import type { RedisClientType } from 'redis';
 import { ScanCommandOptions } from '@redis/client/dist/lib/commands/SCAN';
+import { sortBy } from 'lodash';
 
 export class RedisCookieStore extends Store {
 
@@ -35,17 +36,20 @@ export class RedisCookieStore extends Store {
         return `cookie-store:${self.id}:cookie:${domain}`;
     }
 
-    findCookie(domain: string,
-               path: string,
-               key: string,
-               cb: (err: Error | null, cookie: Cookie | null) => void) {
+    async findCookie(domain: string,
+                     path: string,
+                     key: string,
+                     cb: (err: Error | null, cookie: Cookie | null) => void) {
         const self = this;
         const { client } = self;
 
         const keyName = self.getKeyName(domain, path);
-        client.hGet(keyName, key)
-            .then(str => cb(null, Cookie.fromJSON(str)))
-            .catch(err => cb(err, null));
+        try {
+            const str = await client.hGet(keyName, key);
+            cb(null, Cookie.fromJSON(str));
+        } catch (e) {
+            cb(e, null);
+        }
     }
 
     async findCookies(
@@ -55,7 +59,7 @@ export class RedisCookieStore extends Store {
         cb: (err: Error | null, cookie: Cookie[]) => void,
     ) {
         const self = this;
-        const results: Cookie[] = [];
+        const cookies: Cookie[] = [];
         const { client } = self;
         if (!client) {
             return cb(null, []);
@@ -75,31 +79,35 @@ export class RedisCookieStore extends Store {
                 patterns.map(pattern => this._scan(
                     pattern,
                     async (keys) => {
-                        const dataArr = await client.mGet(keys);
+                        const dataArr = await Promise.all(keys.map(key => client.hGetAll(key)));
                         dataArr.forEach(it => {
-                            results.push(Cookie.fromJSON(it));
+                            Object.values(it).forEach(it => {
+                                cookies.push(Cookie.fromJSON(it));
+                            });
                         });
                     }),
                 ),
             );
-            cb(null, results);
+            cb(null, sortBy(cookies, it => it.creationIndex));
             return;
         } catch (e) {
             cb(e, null);
         }
     };
 
-    putCookie(cookie: Cookie, cb: (err: Error | null) => void) {
+    async putCookie(cookie: Cookie, cb: (err: Error | null) => void) {
         const self = this;
         const { client } = self;
 
         const { key: cookieName, domain, path } = cookie;
         const keyName = self.getKeyName(domain, path);
-        const cookieString = cookie.toString();
-
-        client.hSet(keyName, cookieName, cookieString)
-            .then(() => cb(null))
-            .catch(err => cb(err));
+        const cookieString = JSON.stringify(cookie.toJSON());
+        try {
+            await client.hSet(keyName, cookieName, cookieString);
+            cb(null);
+        } catch (e) {
+            cb(e);
+        }
     }
 
     updateCookie(oldCookie: Cookie, newCookie: Cookie, cb: (err: Error | null) => void) {
@@ -108,17 +116,24 @@ export class RedisCookieStore extends Store {
         // updateCookie() may avoid updating cookies that are identical.  For example,
         // lastAccessed may not be important to some stores and an equality
         // comparison could exclude that field.
-        self.putCookie(newCookie, cb);
+        return self.putCookie(newCookie, cb);
     }
 
-    removeCookie(domain: string, path: string, key: string, cb: (err: Error | null) => void) {
+    async removeCookie(domain: string, path: string, key: string, cb: (err: Error | null) => void) {
         const self = this;
         const { client } = self;
 
         const keyName = self.getKeyName(domain, path);
-        client.hDel(keyName, key)
-            .then(() => cb(null))
-            .catch(err => cb(err));
+        try {
+            await client.hDel(keyName, key);
+            cb(null);
+        } catch (e) {
+            cb(e);
+        }
+    }
+
+    removeAllCookies(cb: (err: Error | null) => void) {
+        return this.removeCookies('*', '*', cb);
     }
 
     async removeCookies(domain: string, path: string, cb: (err: Error | null) => void) {
@@ -150,12 +165,14 @@ export class RedisCookieStore extends Store {
         const cookies: Cookie[] = [];
         const pattern = this.getKeyName('*');
         await this._scan(pattern, async (keys) => {
-            const dataArr = await client.mGet(keys);
+            const dataArr = await Promise.all(keys.map(key => client.hGetAll(key)));
             dataArr.forEach(it => {
-                cookies.push(Cookie.fromJSON(it));
+                Object.values(it).forEach(it => {
+                    cookies.push(Cookie.fromJSON(it));
+                });
             });
         });
-        cb(null, cookies);
+        cb(null, sortBy(cookies, it => it.creationIndex));
     }
 
     async _scan(pattern: string, cb: (keys: string[]) => Promise<void>) {
@@ -165,7 +182,10 @@ export class RedisCookieStore extends Store {
             let cursor = 0, flag = true, count = 1;
             while (flag) {
                 try {
-                    const { cursor: next, keys } = await client.scan(cursor, { MATCH: pattern, COUNT: 100 } as ScanCommandOptions);
+                    const { cursor: next, keys } = await client.scan(cursor, {
+                        MATCH: pattern,
+                        COUNT: 100,
+                    } as ScanCommandOptions);
                     cursor = next;
                     if (cursor === 0) {
                         flag = false;

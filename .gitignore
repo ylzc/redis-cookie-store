@@ -60,3 +60,6 @@ typings/
 
 # Webstorm config
 .idea/*
+
+# test env config file
+.env.test
